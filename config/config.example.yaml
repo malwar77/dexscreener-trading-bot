@@ -1,0 +1,26 @@
+# Memecoin bot example config — PAPER MODE (hard default)
+# Live execution does not exist in this skeleton and is refused by design.
+
+mode:
+  dry_run: true
+  # Live gates from the shared safety contract. They are recognized but
+  # NOT sufficient here: main.py refuses to trade outside paper mode.
+  live_confirmation:
+    confirmed_live: false
+    risk_disclosure_accepted: false
+    # risk_disclosure_accepted_at: "2026-09-12T12:00:00Z"
+
+scanner:
+  min_liquidity_usd: 25000     # skip thin books (rug territory)
+  min_volume24h_usd: 100000
+  max_age_hours: 72            # focus on young pairs only if you want
+  min_txns24h: 100
+
+risk:
+  max_open_positions: 3
+  max_position_pct: 5.0        # % of balance per paper position
+  stop_loss_pct: 15.0
+  daily_loss_limit_pct: 10.0
+
+starting_balance_usd: 1000.0
+paper_fee_pct: 1.0             # simulated fee+slippage per side
