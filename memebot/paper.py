@@ -20,6 +20,7 @@ class Position:
     cost_usd: float                 # including fee
     entry_fee_usd: float
     stop_price: float
+    chain_id: str | None = None      # None in old state files: marked at entry
     opened_at: float = field(default_factory=time.time)
 
 
@@ -33,7 +34,8 @@ class PaperPortfolio:
         self.positions: dict[str, Position] = {}
 
     def buy(self, pair_address: str, token_symbol: str, price: float,
-            cost_usd: float, stop_price: float) -> tuple[bool, str]:
+            cost_usd: float, stop_price: float,
+            chain_id: str | None = None) -> tuple[bool, str]:
         """Simulate a market buy. Returns (ok, reason)."""
         if cost_usd > self.cash:
             return False, f"insufficient cash {self.cash:.2f} < {cost_usd:.2f}"
@@ -49,6 +51,7 @@ class PaperPortfolio:
             cost_usd=cost_usd,
             entry_fee_usd=fee,
             stop_price=stop_price,
+            chain_id=chain_id,
         )
         return True, "filled"
 

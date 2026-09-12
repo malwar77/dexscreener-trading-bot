@@ -32,6 +32,11 @@ never in prompts; paper mode is the hard default; no invented endpoints.
    positions, then risk-gates and paper-buys top candidates. Every entry
    must pass the RiskManager veto (see below).
 3. `status` — honest numbers: cash, marked equity, open positions, and
+
+   `status` also re-fetches live prices for every held position via
+   Dexscreener and shows each position's current P&L, distance to its
+   stop, and a `[STOP HIT]` flag (executed on the next run — status is
+   read-only).
    total P&L **including losses**, with the paper-mode reminder printed.
 
 ## Safety architecture (in code, not prompts)

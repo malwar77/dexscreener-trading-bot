@@ -93,3 +93,27 @@ class DexScreenerClient:
     def token_boosts(self) -> list[dict[str, Any]]:
         data = self._get("/token-boosts/latest/v1")
         return list(data if isinstance(data, list) else [])
+
+    def pair_prices(self, chain_id: str,
+                    pair_addresses: list[str]) -> dict[str, float]:
+        """Live {pair_address: price_usd} via the documented
+        /latest/dex/pairs/{chainId}/{pairAddress} endpoint.
+
+        A pair that is missing, unpriced, or errors is simply absent —
+        one dead pair must not take down the whole status view."""
+        out: dict[str, float] = {}
+        for addr in pair_addresses:
+            try:
+                data = self._get(
+                    "/latest/dex/pairs/%s/%s" % (chain_id, addr))
+            except RuntimeError:
+                continue
+            pair = (data.get("pair") if isinstance(data, dict) else None) \
+                or {}
+            price = pair.get("priceUsd")
+            if price is not None:
+                try:
+                    out[addr] = float(price)
+                except (TypeError, ValueError):
+                    continue
+        return out

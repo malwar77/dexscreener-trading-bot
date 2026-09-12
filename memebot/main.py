@@ -34,6 +34,7 @@ def save_state(portfolio: PaperPortfolio) -> None:
             "cost_usd": p.cost_usd,
             "entry_fee_usd": p.entry_fee_usd,
             "stop_price": p.stop_price,
+            "chain_id": p.chain_id,
             "opened_at": p.opened_at,
         }
         for p in portfolio.positions.values()
@@ -110,7 +111,8 @@ def cmd_run(cfg: BotConfig, query: str) -> int:
             continue
         stop = rm.stop_price(r.price_usd)
         filled, why = portfolio.buy(r.pair_address, r.base_token_symbol,
-                                    r.price_usd, cost, stop)
+                                    r.price_usd, cost, stop,
+                                    chain_id=r.chain_id)
         print(f"PAPER BUY {r.base_token_symbol} {cost:.2f}USD @ "
               f"{r.price_usd:.8f} stop={stop:.8f} ({why})")
         if len(portfolio.positions) >= cfg.risk.max_open_positions:
@@ -119,18 +121,56 @@ def cmd_run(cfg: BotConfig, query: str) -> int:
     return 0
 
 
-def cmd_status(cfg: BotConfig) -> int:
+def live_prices(portfolio: PaperPortfolio,
+                client: DexScreenerClient) -> dict[str, float]:
+    """Current {pair_address: price_usd} for every held position that has
+    a chain recorded. Positions without a chain (old state files) or
+    whose pair cannot be priced are simply absent — the caller marks
+    them at entry price and says so."""
+    by_chain: dict[str, list[str]] = {}
+    for addr, p in portfolio.positions.items():
+        if p.chain_id:
+            by_chain.setdefault(p.chain_id, []).append(addr)
+    out: dict[str, float] = {}
+    for chain, addrs in by_chain.items():
+        out.update(client.pair_prices(chain, addrs))
+    return out
+
+
+def cmd_status(cfg: BotConfig,
+               client: DexScreenerClient | None = None) -> int:
     portfolio = PaperPortfolio(cfg.starting_balance_usd, cfg.paper_fee_pct)
     load_state(portfolio)
-    equity = portfolio.mark_to_market(
-        {a: p.entry_price for a, p in portfolio.positions.items()})
+    client = client or DexScreenerClient()
+    live = live_prices(portfolio, client) if portfolio.positions else {}
+    # mark at live price where available, entry price otherwise
+    prices = {a: live.get(a, p.entry_price)
+              for a, p in portfolio.positions.items()}
+    equity = portfolio.mark_to_market(prices)
+    unreal = portfolio.unrealized_pnl(prices)
     pnl = equity - portfolio.starting_balance
     mode = "PAPER (dry-run)" if cfg.mode.dry_run else "LIVE"
     print(f"mode: {mode}")
     print(f"cash: {portfolio.cash:.2f} USD | equity(mark): {equity:.2f} USD")
     print(f"open positions: {len(portfolio.positions)}")
-    print(f"total pnl (marked at entry): {pnl:+.2f} USD "
+    src = "live" if live else "entry"
+    print(f"total pnl (marked at {src} prices): {pnl:+.2f} USD "
           f"({pnl / portfolio.starting_balance * 100:+.2f}%)")
+    if portfolio.positions:
+        print(f"unrealized: {unreal:+.2f} USD")
+    stops = set(portfolio.stops_hit(prices))
+    for addr, p in portfolio.positions.items():
+        price = live.get(addr)
+        if price is not None:
+            pct = (price / p.entry_price - 1) * 100
+            stop_dist = (price / p.stop_price - 1) * 100
+            price_s = f"{price:.8f} ({pct:+.2f}%) stop {stop_dist:+.1f}% away"
+        else:
+            price_s = "price unavailable — marked at entry"
+        flag = " [STOP HIT — closes on next run]" if addr in stops else ""
+        print(f"  {p.token_symbol}: entry {p.entry_price:.8f} "
+              f"now {price_s}{flag}")
+    print("status is read-only: stops execute on the next run")
     print("numbers are simulated — memecoins can and do go to zero")
     return 0
 
