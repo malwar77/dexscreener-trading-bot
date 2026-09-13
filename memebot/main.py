@@ -186,6 +186,10 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--query", default="SOL/USDC")
         p.add_argument("--config", default=None, help=argparse.SUPPRESS)
         p.add_argument("--once", action="store_true")
+    p_web = sub.add_parser("web", help="read-only dashboard on your LAN")
+    p_web.add_argument("--config", default=None, help=argparse.SUPPRESS)
+    p_web.add_argument("--host", default="0.0.0.0")
+    p_web.add_argument("--port", type=int, default=8788)
     p_status = sub.add_parser("status")
     p_status.add_argument("--config", default=None, help=argparse.SUPPRESS)
     p_report = sub.add_parser("report")
@@ -213,7 +217,17 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_run(cfg, args.query)
     if args.cmd == "report":
         return cmd_report(cfg, args.api_base, args.api_key)
+    if args.cmd == "web":
+        return cmd_web(cfg, args.host, args.port)
     return cmd_status(cfg)
+
+
+def cmd_web(cfg, host: str, port: int) -> int:
+    """Serve the read-only web dashboard on the LAN. No trade controls;
+    prices cached 60s server-side so browser polls stay polite."""
+    from .webui import serve
+    serve(cfg, host, port)
+    return 0
 
 
 def cmd_report(cfg, api_base: str, api_key: str) -> int:

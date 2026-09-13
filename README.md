@@ -66,7 +66,32 @@ pip install -r requirements.txt   # pytest + PyYAML only
 python -m memebot.main scan --query "SOL/USDC"
 python -m memebot.main run  --query "SOL/USDC"     # paper only
 python -m memebot.main status
+python -m memebot.main web                        # LAN dashboard (read-only)
 ```
+
+## Web dashboard on your LAN
+
+`python -m memebot.main web` serves a terminal-style dashboard —
+black background, green for profit, red for loss, blue for
+information, live status dot, 5-second auto-refresh — from a
+stdlib-only server (no extra dependencies):
+
+```
+this machine:  http://127.0.0.1:8788
+on your LAN:   http://192.168.x.x:8788    <- open from your phone
+```
+
+Live prices come from Dexscreener's keyless public API with a
+60-second server-side cache, so browser polling stays polite. When
+prices are unavailable, positions are marked at entry price and the
+dashboard says so — never invented numbers.
+
+It is READ-ONLY by design: no buy/sell buttons exist on the web
+surface. Anyone on your Wi-Fi can view it; nobody can trade from
+it. To bind to this machine only, pass `--host 127.0.0.1`.
+
+Numbers are simulated — memecoins can and do go to zero. This
+skeleton has no live execution adapter by design.```
 
 Tune filters and risk limits in `config/config.example.yaml`:
 
