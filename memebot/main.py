@@ -186,7 +186,7 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--query", default="SOL/USDC")
         p.add_argument("--config", default=None, help=argparse.SUPPRESS)
         p.add_argument("--once", action="store_true")
-    p_web = sub.add_parser("web", help="read-only dashboard on your LAN")
+    p_web = sub.add_parser("web", help="live LAN dashboard (paper-only trade controls)")
     p_web.add_argument("--config", default=None, help=argparse.SUPPRESS)
     p_web.add_argument("--host", default="0.0.0.0")
     p_web.add_argument("--port", type=int, default=8788)
@@ -223,8 +223,10 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def cmd_web(cfg, host: str, port: int) -> int:
-    """Serve the read-only web dashboard on the LAN. No trade controls;
-    prices cached 60s server-side so browser polls stay polite."""
+    """Serve the live web dashboard on the LAN. Paper-only trade
+    controls (buy/close route through the same PaperPortfolio code
+    as the CLI); live-mode configs are refused. Chart library is
+    vendored (TradingView Lightweight Charts, Apache-2.0)."""
     from .webui import serve
     serve(cfg, host, port)
     return 0

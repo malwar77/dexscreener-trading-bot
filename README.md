@@ -66,7 +66,7 @@ pip install -r requirements.txt   # pytest + PyYAML only
 python -m memebot.main scan --query "SOL/USDC"
 python -m memebot.main run  --query "SOL/USDC"     # paper only
 python -m memebot.main status
-python -m memebot.main web                        # LAN dashboard (read-only)
+python -m memebot.main web                        # live LAN dashboard (paper controls)
 ```
 
 ## Web dashboard on your LAN
@@ -86,9 +86,18 @@ Live prices come from Dexscreener's keyless public API with a
 prices are unavailable, positions are marked at entry price and the
 dashboard says so — never invented numbers.
 
-It is READ-ONLY by design: no buy/sell buttons exist on the web
-surface. Anyone on your Wi-Fi can view it; nobody can trade from
-it. To bind to this machine only, pass `--host 127.0.0.1`.
+It is an INTERACTIVE PAPER-ONLY terminal:
+
+- live market scan (Dexscreener keyless API, 60s cache) with buy buttons
+- paper buy / close buttons that route through the exact same
+  PaperPortfolio code as the CLI (same fees, same stop rules, same
+  cash checks) — buys require a live price, never an invented one
+- price charts (TradingView Lightweight Charts, Apache-2.0, vendored)
+  fed by a server-side sampler (30s intervals) since Dexscreener has
+  no public OHLC endpoint — samples are real prices, labeled as such
+- the dashboard REFUSES to start on a non-dry-run config, and the bot
+  has no live execution adapter at all — there is no way to trade
+  real money from the web surface because the code path does not exist
 
 Numbers are simulated — memecoins can and do go to zero. This
 skeleton has no live execution adapter by design.```
@@ -152,3 +161,9 @@ rate limiting).
 ## License
 
 MIT — see LICENSE. Educational software, provided as-is, no warranty.
+
+## Third-party software
+
+- TradingView Lightweight Charts v4.2.3 (Apache-2.0) — vendored
+  unmodified at `memebot/static/lightweight-charts.standalone.production.js`.
+  Charts render locally in your browser; no TradingView servers are contacted.
