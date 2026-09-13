@@ -163,7 +163,8 @@ def market_snapshot(cfg: BotConfig, client: DexScreenerClient,
     cached_ts, cached = _market_cache
     if now - cached_ts < MARKET_CACHE_TTL and cached:
         return cached
-    from memebot.scanner import passes_filters, parse_pair
+    from memebot.scanner import (passes_filters, parse_pair,
+                             risk_flags)
     pairs = client.search(query) if query else []
     survivors = scan_pairs(pairs, cfg.scanner)
 
@@ -183,6 +184,7 @@ def market_snapshot(cfg: BotConfig, client: DexScreenerClient,
             "passes_filters": passes,
             "filter_reason": r.rejected_reason
             if not passes else None,
+            "risk_flags": risk_flags(r),
         }
 
     out = [row(r, True) for r in survivors[:limit]]
@@ -576,7 +578,8 @@ async function refreshMarket(){
       const verdict = p.passes_filters ? `<span class="pos">PASS</span>`
         : `<span class="neg" title="${esc(p.filter_reason||'')}">FILTERED</span>`;
       const btn = `<button class="buy" onclick="buyPrompt('${esc(p.pair_address)}','${esc(p.chain_id)}','${esc(p.symbol)}',${p.passes_filters?"true":"false"})">buy</button>`;
-      return `<tr><td class="${dim} blue">${esc(p.symbol)}/${esc(p.quote)} <span class="sub">${verdict}</span></td>
+      const risks = (p.risk_flags||[]).length ? `<div class="neg" style="font-size:10px">${esc((p.risk_flags||[]).join("; "))}</div>` : "";
+      return `<tr><td class="${dim} blue">${esc(p.symbol)}/${esc(p.quote)} <span class="sub">${verdict}</span>${risks}</td>
        <td class="${dim}">${Number(p.price_usd).toPrecision(4)}</td>
        <td class="${dim}">${fmtUsd(p.liquidity_usd)}</td><td class="${dim}">${fmtUsd(p.volume24h_usd)}</td>
        <td class="${dim}">${p.txns24h}</td><td class="${dim}">${p.age_hours}h</td>

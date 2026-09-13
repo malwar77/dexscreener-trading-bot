@@ -28,6 +28,8 @@ class ScanResult:
     dex: str
     url: str
     rejected_reason: str | None = None
+    txns24h_buys: int = 0
+    txns24h_sells: int = 0
 
     @property
     def age_hours(self) -> float:
@@ -48,9 +50,9 @@ def parse_pair(pair: dict[str, Any]) -> ScanResult | None:
     try:
         base = (pair.get("baseToken") or {})
         quote = (pair.get("quoteToken") or {})
-        txns24 = _num(
-            (pair.get("txns") or {}).get("h24", {}).get("buys", 0)
-        ) + _num((pair.get("txns") or {}).get("h24", {}).get("sells", 0))
+        _b = _num((pair.get("txns") or {}).get("h24", {}).get("buys", 0))
+        _s = _num((pair.get("txns") or {}).get("h24", {}).get("sells", 0))
+        txns24 = _b + _s
         return ScanResult(
             pair_address=pair["pairAddress"],
             chain_id=pair.get("chainId", ""),
@@ -61,6 +63,8 @@ def parse_pair(pair: dict[str, Any]) -> ScanResult | None:
             volume24h_usd=_num((pair.get("volume") or {}).get("h24")),
             pair_created_at=_num(pair.get("pairCreatedAt")),
             txns24h=int(txns24),
+            txns24h_buys=int(_b),
+            txns24h_sells=int(_s),
             dex=pair.get("dexId", "?"),
             url=pair.get("url", ""),
         )
@@ -81,6 +85,33 @@ def passes_filters(result: ScanResult,
     if result.txns24h < cfg.min_txns24h:
         return False, f"txns24h {result.txns24h} < {cfg.min_txns24h}"
     return True, None
+
+
+def risk_flags(result: ScanResult) -> list[str]:
+    """Honest rug-risk HEURISTICS from public Dexscreener data only.
+
+    These are cheap sanity flags, not protection: honeypots, mint
+    functions and hidden ownership CANNOT be detected from market data
+    (that requires contract analysis, which this bot does not do).
+    A pair with zero flags can still be a rug. Heuristic, advisory,
+    never a green light.
+    """
+    flags: list[str] = []
+    liq = result.liquidity_usd
+    if liq < 10_000:
+        flags.append(f"thin-liquidity ({liq:.0f} USD)")
+    if result.volume24h_usd > 3 * max(liq, 1):
+        flags.append("volume > 3x liquidity (churn/wash pattern)")
+    b = max(result.txns24h_buys, 0) or 1
+    s = max(result.txns24h_sells, 0)
+    if s == 0 and b >= 20:
+        flags.append("sells = 0 with active buys (exit-liquidity risk)")
+    elif b / max(s, 1) > 10:
+        flags.append("buys/sells > 10 (one-way flow, suspicious)")
+    if result.age_hours < 6:
+        flags.append(f"very fresh ({result.age_hours:.1f}h — most rugs "
+                     "happen in the first hours)")
+    return flags
 
 
 def scan_pairs(pairs: list[dict[str, Any]],

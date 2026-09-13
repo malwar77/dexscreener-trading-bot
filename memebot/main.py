@@ -64,11 +64,15 @@ def cmd_scan(cfg: BotConfig, query: str) -> int:
     print(f"scanned {len(pairs)} pairs for '{query or '-'}'; "
           f"{len(survivors)} pass filters:")
     for r in survivors[:10]:
+        flags = risk_flags(r)
+        warn = ("  !! " + "; ".join(flags)) if flags else ""
         print(f"  {r.base_token_symbol}/{r.quote_token_symbol} [{r.dex}] "
               f"price={r.price_usd:.8f} liq={r.liquidity_usd:.0f}USD "
               f"vol24h={r.volume24h_usd:.0f}USD txns={r.txns24h} "
-              f"age={r.age_hours:.1f}h")
+              f"age={r.age_hours:.1f}h{warn}")
     print("candidates are facts, not trade recommendations")
+    print("risk flags are heuristics from public data only — they cannot"
+          " detect honeypots or hidden contract risk")
     return 0
 
 

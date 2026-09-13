@@ -1,4 +1,11 @@
-# Memecoin Trading Bot (Dexscreener) — paper-mode skeleton
+# Memecoin Scanner + Paper Simulator (Dexscreener)
+
+> ⚠️ **EXPERIMENTAL — educational prototype.** This is NOT a trading
+> bot. There is no live execution and no GMGN or PumpFun integration
+> (they have no official public APIs — nothing was invented). It scans
+> Dexscreener's public API and simulates trades on paper only. Scanner
+> filters are simple heuristics; they do NOT protect against rugs,
+> honeypots, or liquidity pulls. No real-world edge is claimed.
 
 [![tests](https://github.com/malwar77/dexscreener-trading-bot/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/malwar77/dexscreener-trading-bot/actions/workflows/tests.yml)
 
