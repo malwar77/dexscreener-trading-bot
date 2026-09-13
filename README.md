@@ -87,6 +87,31 @@ starting_balance_usd: 1000.0
 paper_fee_pct: 1.0         # simulated DEX fees + slippage per side
 ```
 
+## Morning WhatsApp report (status beacon)
+
+The agent (Base44 Superagent) sends a morning WhatsApp report with
+mode, equity, total PnL, open positions and a watchdog alert if this
+bot stops checking in. This bot feeds it via the agent's external API
+(exact curl examples are in the agent editor's Developer / API Docs
+panel):
+
+1. Set env vars (or pass flags): `AGENT_API_BASE` (the agent's API
+   root, e.g. https://<host>/api/agents/<agent_id>) and
+   `AGENT_API_KEY` (from the editor's Developer panel).
+2. `python -m memebot.main report` — prints the snapshot; with
+   AGENT_API_BASE/AGENT_API_KEY set it also sends a STATUS BEACON
+   message to the agent, which stores it. Offline-safe: if
+   DexScreener is unreachable, positions are marked at entry price
+   and the snapshot says so.
+3. Schedule it before the agent's 7:30am ET run, e.g. cron at 07:15
+   America/New_York:
+   `15 7 * * * cd /path/to/dexscreener-trading-bot && python -m memebot.main report`
+
+The snapshot is honest about the skeleton's limits: the RiskManager
+gates entries only (no daily loss limit yet), and the PnL reported is
+total-since-inception, not daily. Strictly read-only and advisory —
+nothing here places, approves or alters a trade.
+
 ## Tests
 
 ```bash

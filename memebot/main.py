@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -187,6 +188,12 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--once", action="store_true")
     p_status = sub.add_parser("status")
     p_status.add_argument("--config", default=None, help=argparse.SUPPRESS)
+    p_report = sub.add_parser("report")
+    p_report.add_argument("--config", default=None, help=argparse.SUPPRESS)
+    p_report.add_argument("--api-base",
+                          default=os.environ.get("AGENT_API_BASE", ""))
+    p_report.add_argument("--api-key",
+                          default=os.environ.get("AGENT_API_KEY", ""))
     args = parser.parse_args(argv)
 
     try:
@@ -204,7 +211,27 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_scan(cfg, args.query)
     if args.cmd == "run":
         return cmd_run(cfg, args.query)
+    if args.cmd == "report":
+        return cmd_report(cfg, args.api_base, args.api_key)
     return cmd_status(cfg)
+
+
+def cmd_report(cfg, api_base: str, api_key: str) -> int:
+    """Print the status snapshot; optionally send it as a STATUS BEACON
+    to the agent (read-only — the agent stores it for the morning
+    report; it never places or alters trades)."""
+    from .beacon import build_status, send_beacon
+    payload = build_status(cfg)
+    print(json.dumps(payload, indent=2))
+    if not api_base:
+        print("no --api-base / AGENT_API_BASE set: payload printed only")
+        return 0
+    if not api_key:
+        print("no --api-key / AGENT_API_KEY set: refusing to send")
+        return 1
+    ok, detail = send_beacon(payload, api_base, api_key)
+    print("beacon %s: %s" % ("sent" if ok else "FAILED", detail))
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":
